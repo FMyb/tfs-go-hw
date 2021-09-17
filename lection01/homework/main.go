@@ -61,4 +61,5 @@ func getSandglassColor(color int) Sandglass {
 func main() {
 	sandglass()
 	sandglass(getSandglassChar('@'), getSandglassColor(33))
+	sandglass(getSandglassSize(32))
 }
