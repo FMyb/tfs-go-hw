@@ -40,26 +40,14 @@ func sandglass(args ...Sandglass) {
 	fmt.Println()
 }
 
-func getSandglassChar(char int) Sandglass {
+func sandglassArg(name string, res int) Sandglass {
 	return func() (string, int) {
-		return "char", char
-	}
-}
-
-func getSandglassSize(size int) Sandglass {
-	return func() (string, int) {
-		return "size", size
-	}
-}
-
-func getSandglassColor(color int) Sandglass {
-	return func() (string, int) {
-		return "color", color
+		return name, res
 	}
 }
 
 func main() {
 	sandglass()
-	sandglass(getSandglassChar('@'), getSandglassColor(33))
-	sandglass(getSandglassSize(32))
+	sandglass(sandglassArg("char", '@'), sandglassArg("color", 33))
+	sandglass(sandglassArg("size", 33))
 }
