@@ -2,22 +2,14 @@ package main
 
 import "fmt"
 
-type Sandglass func() (string, int)
+type Sandglass func(*int, *int, *int)
 
 func sandglass(args ...Sandglass) {
 	size := 15
 	color := 0
 	var char int = 'X'
 	for _, arg := range args {
-		name, res := arg()
-		switch name {
-		case "size":
-			size = res
-		case "char":
-			char = res
-		case "color":
-			color = res
-		}
+		arg(&size, &color, &char)
 	}
 	fmt.Println()
 	for i := 0; i < size; i++ {
@@ -40,14 +32,26 @@ func sandglass(args ...Sandglass) {
 	fmt.Println()
 }
 
-func sandglassArg(name string, res int) Sandglass {
-	return func() (string, int) {
-		return name, res
+func getSandglassChar(char int) Sandglass {
+	return func(sizeArg *int, colorArg *int, charArg *int) {
+		*charArg = char
+	}
+}
+
+func getSandglassSize(size int) Sandglass {
+	return func(sizeArg *int, colorArg *int, charArg *int) {
+		*sizeArg = size
+	}
+}
+
+func getSandglassColor(color int) Sandglass {
+	return func(sizeArg *int, colorArg *int, charArg *int) {
+		*colorArg = color
 	}
 }
 
 func main() {
 	sandglass()
-	sandglass(sandglassArg("char", '@'), sandglassArg("color", 33))
-	sandglass(sandglassArg("size", 33))
+	sandglass(getSandglassChar('@'), getSandglassColor(33))
+	sandglass(getSandglassSize(16))
 }
