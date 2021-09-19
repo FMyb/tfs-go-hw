@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-type Sandglass func(*int, *int, *int)
+type Sandglass func(...*int)
 
 func sandglass(args ...Sandglass) {
 	size := 15
@@ -32,21 +32,21 @@ func sandglass(args ...Sandglass) {
 	fmt.Println()
 }
 
-func getSandglassChar(char int) Sandglass {
-	return func(sizeArg *int, colorArg *int, charArg *int) {
-		*charArg = char
-	}
-}
-
 func getSandglassSize(size int) Sandglass {
-	return func(sizeArg *int, colorArg *int, charArg *int) {
-		*sizeArg = size
+	return func(args ...*int) {
+		*args[0] = size
 	}
 }
 
 func getSandglassColor(color int) Sandglass {
-	return func(sizeArg *int, colorArg *int, charArg *int) {
-		*colorArg = color
+	return func(args ...*int) {
+		*args[1] = color
+	}
+}
+
+func getSandglassChar(char int) Sandglass {
+	return func(args ...*int) {
+		*args[2] = char
 	}
 }
 
