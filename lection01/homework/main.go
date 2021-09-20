@@ -9,8 +9,9 @@ func sandglass(args ...Sandglass) {
 	size := 15
 	color := 0
 	var char int = 'X'
+	defaultArgs := SandglassArgMap{"size": &size, "color": &color, "char": &char}
 	for _, arg := range args {
-		arg(SandglassArgMap{"size": &size, "color": &color, "char": &char})
+		arg(defaultArgs)
 	}
 	fmt.Println()
 	for i := 0; i < size; i++ {
