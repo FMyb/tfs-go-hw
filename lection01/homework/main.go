@@ -2,14 +2,15 @@ package main
 
 import "fmt"
 
-type Sandglass func(...*int)
+type SandglassArgMap map[string]*int
+type Sandglass func(args SandglassArgMap)
 
 func sandglass(args ...Sandglass) {
 	size := 15
 	color := 0
 	var char int = 'X'
 	for _, arg := range args {
-		arg(&size, &color, &char)
+		arg(SandglassArgMap{"size": &size, "color": &color, "char": &char})
 	}
 	fmt.Println()
 	for i := 0; i < size; i++ {
@@ -33,20 +34,29 @@ func sandglass(args ...Sandglass) {
 }
 
 func getSandglassSize(size int) Sandglass {
-	return func(args ...*int) {
-		*args[0] = size
+	return func(args SandglassArgMap) {
+		sz, ok := args["size"]
+		if ok {
+			*sz = size
+		}
 	}
 }
 
 func getSandglassColor(color int) Sandglass {
-	return func(args ...*int) {
-		*args[1] = color
+	return func(args SandglassArgMap) {
+		clr, ok := args["color"]
+		if ok {
+			*clr = color
+		}
 	}
 }
 
 func getSandglassChar(char int) Sandglass {
-	return func(args ...*int) {
-		*args[2] = char
+	return func(args SandglassArgMap) {
+		chr, ok := args["char"]
+		if ok {
+			*chr = char
+		}
 	}
 }
 
