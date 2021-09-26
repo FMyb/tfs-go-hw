@@ -5,17 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"strconv"
 	"time"
 )
-
-//
-//type OperationBody struct {
-//	Type string `json:"type"`
-//	Value int `json:"value"`
-//	Id interface{} `json:"id"`
-//}
 
 type Operation struct {
 	Company   string      `json:"company"`
@@ -44,25 +38,30 @@ func (op *Operation) UnmarshalJSON(data []byte) error {
 		v := operationMap.(map[string]interface{})
 		id, ok := v["id"]
 		if ok {
-			switch id.(type) {
+			switch a := id.(type) {
 			case string:
-				op.Id = id.(string)
+				op.Id = a
 			case int:
-				op.Id = id.(int)
+				op.Id = a
+			case float64:
+				if a == math.Trunc(a) {
+					op.Id = int(a)
+				}
 			}
-			op.Id = id
 		}
 		value, ok := v["value"]
 		if ok {
-			switch value.(type) {
+			switch a := value.(type) {
 			case string:
-				parseVal, err := strconv.Atoi(value.(string))
+				parseVal, err := strconv.Atoi(a)
 				if err == nil {
 					op.Value = &parseVal
 				}
 			case float64:
-				parseVal := int(value.(float64))
-				op.Value = &parseVal
+				if a == math.Trunc(a) {
+					parseVal := int(a)
+					op.Value = &parseVal
+				}
 			case int:
 				parseVal := value.(int)
 				op.Value = &parseVal
@@ -86,27 +85,32 @@ func (op *Operation) UnmarshalJSON(data []byte) error {
 	}
 	id, ok := m["id"]
 	if ok {
-		switch id.(type) {
+		switch a := id.(type) {
 		case string:
-			op.Id = id.(string)
+			op.Id = a
 		case int:
-			op.Id = id.(int)
+			op.Id = a
+		case float64:
+			if a == math.Trunc(a) {
+				op.Id = int(a)
+			}
 		}
-		op.Id = id
 	}
 	value, ok := m["value"]
 	if ok {
-		switch value.(type) {
+		switch a := value.(type) {
 		case string:
-			parseVal, err := strconv.Atoi(value.(string))
+			parseVal, err := strconv.Atoi(a)
 			if err == nil {
 				op.Value = &parseVal
 			}
 		case float64:
-			parseVal := int(value.(float64))
-			op.Value = &parseVal
+			if a == math.Trunc(a) {
+				parseVal := int(a)
+				op.Value = &parseVal
+			}
 		case int:
-			parseVal := value.(int)
+			parseVal := a
 			op.Value = &parseVal
 		}
 	}
