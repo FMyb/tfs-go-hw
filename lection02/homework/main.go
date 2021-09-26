@@ -13,7 +13,7 @@ import (
 
 type Operation struct {
 	Company   string      `json:"company"`
-	Id        interface{} `json:"id"`
+	ID        interface{} `json:"id"`
 	Type      string      `json:"type"`
 	Value     *int        `json:"value"`
 	CreatedAt *time.Time  `json:"created_at"`
@@ -40,12 +40,12 @@ func (op *Operation) UnmarshalJSON(data []byte) error {
 		if ok {
 			switch a := id.(type) {
 			case string:
-				op.Id = a
+				op.ID = a
 			case int:
-				op.Id = a
+				op.ID = a
 			case float64:
 				if a == math.Trunc(a) {
-					op.Id = int(a)
+					op.ID = int(a)
 				}
 			}
 		}
@@ -87,12 +87,12 @@ func (op *Operation) UnmarshalJSON(data []byte) error {
 	if ok {
 		switch a := id.(type) {
 		case string:
-			op.Id = a
+			op.ID = a
 		case int:
-			op.Id = a
+			op.ID = a
 		case float64:
 			if a == math.Trunc(a) {
-				op.Id = int(a)
+				op.ID = int(a)
 			}
 		}
 	}
@@ -185,11 +185,11 @@ func main() {
 	for company, operationList := range operationsMap {
 		comp := CompanyOperation{Company: company}
 		for _, operation := range operationList {
-			if operation.CreatedAt == nil || operation.Id == nil {
+			if operation.CreatedAt == nil || operation.ID == nil {
 				continue
 			}
 			if operation.Type == "" || operation.Value == nil {
-				comp.InvalidOperations = append(comp.InvalidOperations, operation.Id)
+				comp.InvalidOperations = append(comp.InvalidOperations, operation.ID)
 			} else {
 				comp.OperationsCount++
 				switch operation.Type {

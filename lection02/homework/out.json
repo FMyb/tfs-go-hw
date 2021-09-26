@@ -1,11 +1,13 @@
 [
 	{
 		"company": "hoofs",
-		"valid_operations_count": 17,
-		"balance": 1862,
+		"valid_operations_count": 15,
+		"balance": 1493,
 		"invalid_operations": [
 			827,
-			836
+			836,
+			"0116209c-f03c-4d14-9725-ae020e905e1e",
+			845
 		]
 	},
 	{
