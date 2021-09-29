@@ -12,11 +12,27 @@ import (
 )
 
 type Operation struct {
-	Company   string      `json:"company"`
+	Company   string
+	ID        interface{}
+	Type      string
+	Value     *int
+	CreatedAt *time.Time
+}
+
+type OperationBody struct {
 	ID        interface{} `json:"id"`
 	Type      string      `json:"type"`
-	Value     *int        `json:"value"`
-	CreatedAt *time.Time  `json:"created_at"`
+	Value     interface{} `json:"value"`
+	CreatedAt string      `json:"created_at"`
+}
+
+type OperationParse struct {
+	Company   string        `json:"company"`
+	ID        interface{}   `json:"id"`
+	Type      string        `json:"type"`
+	Value     interface{}   `json:"value"`
+	CreatedAt string        `json:"created_at"`
+	Body      OperationBody `json:"operation"`
 }
 
 type CompanyOperation struct {
@@ -26,65 +42,22 @@ type CompanyOperation struct {
 	InvalidOperations []interface{} `json:"invalid_operations,omitempty"`
 }
 
-func (op *Operation) UnmarshalJSON(data []byte) error {
-	var f interface{}
-	err := json.Unmarshal(data, &f)
-	if err != nil {
-		return err
+func convertToOperations(opParse []OperationParse) []Operation {
+	res := make([]Operation, len(opParse))
+	for i, op := range opParse {
+		res[i] = op.convertToOperation()
 	}
-	m := f.(map[string]interface{})
-	operationMap, ok := m["operation"]
-	if ok {
-		v := operationMap.(map[string]interface{})
-		id, ok := v["id"]
-		if ok {
-			switch a := id.(type) {
-			case string:
-				op.ID = a
-			case int:
-				op.ID = a
-			case float64:
-				if a == math.Trunc(a) {
-					op.ID = int(a)
-				}
-			}
-		}
-		value, ok := v["value"]
-		if ok {
-			switch a := value.(type) {
-			case string:
-				parseVal, err := strconv.Atoi(a)
-				if err == nil {
-					op.Value = &parseVal
-				}
-			case float64:
-				if a == math.Trunc(a) {
-					parseVal := int(a)
-					op.Value = &parseVal
-				}
-			case int:
-				parseVal := value.(int)
-				op.Value = &parseVal
-			}
-		}
-		creationAt, ok := v["created_at"]
-		if ok {
-			create, _ := time.Parse(time.RFC3339, creationAt.(string))
-			op.CreatedAt = &create
-		}
-		t, ok := v["type"]
-		if ok {
-			parseT, ok := t.(string)
-			if ok {
-				switch parseT {
-				case "income", "outcome", "+", "-":
-					op.Type = parseT
-				}
-			}
-		}
+	return res
+}
+
+func (opParse OperationParse) convertToOperation() Operation {
+	op := Operation{}
+	op.Company = opParse.Company
+	id := opParse.ID
+	if id == nil {
+		id = opParse.Body.ID
 	}
-	id, ok := m["id"]
-	if ok {
+	if id != nil {
 		switch a := id.(type) {
 		case string:
 			op.ID = a
@@ -96,8 +69,11 @@ func (op *Operation) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
-	value, ok := m["value"]
-	if ok {
+	value := opParse.Value
+	if value == nil {
+		value = opParse.Body.Value
+	}
+	if value != nil {
 		switch a := value.(type) {
 		case string:
 			parseVal, err := strconv.Atoi(a)
@@ -110,30 +86,29 @@ func (op *Operation) UnmarshalJSON(data []byte) error {
 				op.Value = &parseVal
 			}
 		case int:
-			parseVal := a
+			parseVal := value.(int)
 			op.Value = &parseVal
 		}
 	}
-	t, ok := m["type"]
-	if ok {
-		parseT, ok := t.(string)
-		if ok {
-			switch parseT {
-			case "income", "outcome", "+", "-":
-				op.Type = parseT
-			}
-		}
+	createdAt := opParse.CreatedAt
+	if createdAt == "" {
+		createdAt = opParse.Body.CreatedAt
 	}
-	company, ok := m["company"]
-	if ok {
-		op.Company = company.(string)
-	}
-	creationAt, ok := m["created_at"]
-	if ok {
-		create, _ := time.Parse(time.RFC3339, creationAt.(string))
+	if createdAt != "" {
+		create, _ := time.Parse(time.RFC3339, createdAt)
 		op.CreatedAt = &create
 	}
-	return nil
+	t := opParse.Type
+	if t == "" {
+		t = opParse.Body.Type
+	}
+	if t != "" {
+		switch t {
+		case "income", "outcome", "+", "-":
+			op.Type = t
+		}
+	}
+	return op
 }
 
 func main() {
@@ -164,12 +139,13 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	var operations []Operation
-	err = json.Unmarshal(data, &operations)
+	var operationsParse []OperationParse
+	err = json.Unmarshal(data, &operationsParse)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	operations := convertToOperations(operationsParse)
 	operationsMap := make(map[string][]Operation)
 	for _, operation := range operations {
 		if operation.Company == "" {
