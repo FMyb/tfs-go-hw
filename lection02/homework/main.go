@@ -27,12 +27,9 @@ type OperationBody struct {
 }
 
 type OperationParse struct {
-	Company   string        `json:"company"`
-	ID        interface{}   `json:"id"`
-	Type      string        `json:"type"`
-	Value     interface{}   `json:"value"`
-	CreatedAt string        `json:"created_at"`
-	Body      OperationBody `json:"operation"`
+	Company       string `json:"company"`
+	OperationBody `json:""`
+	Body          OperationBody `json:"operation"`
 }
 
 type CompanyOperation struct {
