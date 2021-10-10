@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/FMyb/tfs-go-hw/lection03/homework/domain"
+
 	"github.com/FMyb/tfs-go-hw/lection03/homework/generator"
 )
 
