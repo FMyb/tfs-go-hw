@@ -5,13 +5,13 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"github.com/FMyb/tfs-go-hw/lection03/homework/domain"
+	"github.com/FMyb/tfs-go-hw/lection03/homework/generator"
 	"math"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/FMyb/tfs-go-hw/lection03/homework/domain"
-	"github.com/FMyb/tfs-go-hw/lection03/homework/generator"
 	log "github.com/sirupsen/logrus"
 )
 
