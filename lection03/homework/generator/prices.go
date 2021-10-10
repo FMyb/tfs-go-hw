@@ -2,9 +2,10 @@ package generator
 
 import (
 	"context"
-	"github.com/FMyb/tfs-go-hw/lection03/homework/domain"
 	"math/rand"
 	"time"
+
+	"github.com/FMyb/tfs-go-hw/lection03/homework/domain"
 )
 
 type Config struct {
