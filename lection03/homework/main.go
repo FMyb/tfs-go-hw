@@ -151,7 +151,6 @@ func main() {
 	logger := log.New()
 	ctx, cancel := context.WithCancel(context.Background())
 	pg := generator.NewPricesGenerator(generator.Config{
-		//ctx1, cancel1 := context.WithCancel(context.Background())
 		Factor:  10,
 		Delay:   time.Millisecond * 500,
 		Tickers: tickers,
