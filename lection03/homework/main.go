@@ -60,26 +60,34 @@ func to1m(in <-chan domain.Price) <-chan domain.Candle {
 	candles := make(map[string]domain.Candle)
 	go func() {
 		defer close(out)
+		candle := domain.Candle{}
+		writeLast := false
 		for price := range in {
 			time1m, err := domain.PeriodTS(domain.CandlePeriod1m, price.TS)
 			if errors.Is(err, domain.ErrUnknownPeriod) {
 				log.Errorf("Can't convert period %s", price.TS)
 				continue
 			}
-			candle, ok := candles[price.Ticker]
+			ok := false
+			candle, ok = candles[price.Ticker]
 			if ok {
 				candle.Low = math.Min(candle.Low, price.Value)
 				candle.High = math.Max(candle.High, price.Value)
+				candle.Close = price.Value
 				if candle.TS == time1m {
 					candles[price.Ticker] = candle
+					writeLast = false
 				} else {
-					candle.Close = price.Value
+					writeLast = true
 					out <- candle
 					candles[price.Ticker] = createCandle1mFromPrice(price, time1m)
 				}
 			} else {
 				candles[price.Ticker] = createCandle1mFromPrice(price, time1m)
 			}
+		}
+		if !writeLast {
+			out <- candle
 		}
 		log.Infof("Close 1m")
 	}()
@@ -91,26 +99,34 @@ func toOtherTime(in <-chan domain.Candle, period domain.CandlePeriod) <-chan dom
 	candles := make(map[string]domain.Candle)
 	go func() {
 		defer close(out)
+		candle := domain.Candle{}
+		writeLast := false
 		for candleM := range in {
 			ts, err := domain.PeriodTS(period, candleM.TS)
 			if errors.Is(err, domain.ErrUnknownPeriod) {
 				log.Errorf("Can't convert period %s", candleM.TS)
 				continue
 			}
-			candle, ok := candles[candleM.Ticker]
+			ok := false
+			candle, ok = candles[candleM.Ticker]
 			if ok {
+				writeLast = false
 				candle.Low = math.Min(candle.Low, candleM.Low)
 				candle.High = math.Max(candle.High, candleM.High)
+				candle.Close = candleM.Close
 				if candle.TS == ts {
 					candles[candleM.Ticker] = candle
 				} else {
-					candle.Close = candleM.Close
+					writeLast = true
 					out <- candle
 					candles[candleM.Ticker] = createCandleFromCandle(candleM, period, ts)
 				}
 			} else {
 				candles[candleM.Ticker] = createCandleFromCandle(candleM, period, ts)
 			}
+		}
+		if !writeLast {
+			out <- candle
 		}
 		log.Infof("Close %s", period)
 	}()
@@ -131,14 +147,13 @@ func writeCandlesToFile(in <-chan domain.Candle, f *os.File, wg *sync.WaitGroup)
 		defer wg.Done()
 		defer close(out)
 		w := csv.NewWriter(f)
+		defer w.Flush()
 		i := 0
 		for candle := range in {
-			log.Infof("prices (1m) %d: %+v", i, candle)
+			log.Infof("prices (%s) %d: %+v", candle.Period, i, candle)
 			err := w.Write(candleToString(candle))
 			if err != nil {
 				log.Errorf("Can't write candle: %s", err)
-			} else {
-				w.Flush()
 			}
 			i++
 			out <- candle
@@ -173,7 +188,7 @@ func main() {
 		return
 	}
 	wg := sync.WaitGroup{}
-	wg.Add(5)
+	wg.Add(4)
 	prices := pg.Prices(ctx)
 	candles1m := writeCandlesToFile(to1m(prices), f1m, &wg)
 	candles2m := writeCandlesToFile(to2m(candles1m), f2m, &wg)
@@ -186,11 +201,8 @@ func main() {
 	}()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT)
-	go func() {
-		defer wg.Done()
-		<-c
-		logger.Infof("Start shoutdown...")
-		cancel()
-	}()
+	<-c
+	logger.Infof("Start shoutdown...")
+	cancel()
 	wg.Wait()
 }
