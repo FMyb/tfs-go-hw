@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -53,10 +55,11 @@ func candleToString(candle domain.Candle) []string {
 	return res
 }
 
-func to1m(ctx context.Context, in <-chan domain.Price) <-chan domain.Candle {
+func to1m(in <-chan domain.Price) <-chan domain.Candle {
 	out := make(chan domain.Candle)
 	candles := make(map[string]domain.Candle)
 	go func() {
+		defer close(out)
 		for price := range in {
 			time1m, err := domain.PeriodTS(domain.CandlePeriod1m, price.TS)
 			if errors.Is(err, domain.ErrUnknownPeriod) {
@@ -77,21 +80,17 @@ func to1m(ctx context.Context, in <-chan domain.Price) <-chan domain.Candle {
 			} else {
 				candles[price.Ticker] = createCandle1mFromPrice(price, time1m)
 			}
-			select {
-			case <-ctx.Done():
-				break
-			default:
-				continue
-			}
 		}
+		log.Infof("Close 1m")
 	}()
 	return out
 }
 
-func toOtherTime(ctx context.Context, in <-chan domain.Candle, period domain.CandlePeriod) <-chan domain.Candle {
+func toOtherTime(in <-chan domain.Candle, period domain.CandlePeriod) <-chan domain.Candle {
 	out := make(chan domain.Candle)
 	candles := make(map[string]domain.Candle)
 	go func() {
+		defer close(out)
 		for candleM := range in {
 			ts, err := domain.PeriodTS(period, candleM.TS)
 			if errors.Is(err, domain.ErrUnknownPeriod) {
@@ -112,40 +111,47 @@ func toOtherTime(ctx context.Context, in <-chan domain.Candle, period domain.Can
 			} else {
 				candles[candleM.Ticker] = createCandleFromCandle(candleM, period, ts)
 			}
-			select {
-			case <-ctx.Done():
-				break
-			default:
-				continue
+		}
+		log.Infof("Close %s", period)
+	}()
+	return out
+}
+
+func to2m(in <-chan domain.Candle) <-chan domain.Candle {
+	return toOtherTime(in, domain.CandlePeriod2m)
+}
+
+func to10m(in <-chan domain.Candle) <-chan domain.Candle {
+	return toOtherTime(in, domain.CandlePeriod10m)
+}
+
+func writeCandlesToFile(in <-chan domain.Candle, f *os.File, wg *sync.WaitGroup) <-chan domain.Candle {
+	out := make(chan domain.Candle)
+	go func() {
+		defer wg.Done()
+		defer close(out)
+		w := csv.NewWriter(f)
+		i := 0
+		for candle := range in {
+			log.Infof("prices (1m) %d: %+v", i, candle)
+			err := w.Write(candleToString(candle))
+			if err != nil {
+				log.Errorf("Can't write candle: %s", err)
+			} else {
+				w.Flush()
 			}
+			i++
+			out <- candle
 		}
 	}()
 	return out
 }
 
-func to2m(ctx context.Context, in <-chan domain.Candle) <-chan domain.Candle {
-	return toOtherTime(ctx, in, domain.CandlePeriod2m)
-}
-
-func to10m(ctx context.Context, in <-chan domain.Candle) <-chan domain.Candle {
-	return toOtherTime(ctx, in, domain.CandlePeriod10m)
-}
-
 func main() {
 	logger := log.New()
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx1, cancel1 := context.WithCancel(context.Background())
-	ctx2, cancel2 := context.WithCancel(ctx1)
-	ctx10, cancel10 := context.WithCancel(ctx2)
-	c := make(chan os.Signal, 1)
-	go func() {
-		<-c
-		cancel10()
-		cancel2()
-		cancel1()
-		os.Exit(0)
-	}()
 	pg := generator.NewPricesGenerator(generator.Config{
+		//ctx1, cancel1 := context.WithCancel(context.Background())
 		Factor:  10,
 		Delay:   time.Millisecond * 500,
 		Tickers: tickers,
@@ -167,61 +173,25 @@ func main() {
 		fmt.Printf("Can't create candles_10m.csv: %s", err)
 		return
 	}
-	prices := pg.Prices(ctx)
-	candles1m := to1m(ctx1, prices)
-	rCandles1m := make(chan domain.Candle)
-	candles2m := to2m(ctx2, rCandles1m)
-	rCandles2m := make(chan domain.Candle)
-	candles10m := to10m(ctx10, rCandles2m)
 	wg := sync.WaitGroup{}
-	wg.Add(3)
+	wg.Add(5)
+	prices := pg.Prices(ctx)
+	candles1m := writeCandlesToFile(to1m(prices), f1m, &wg)
+	candles2m := writeCandlesToFile(to2m(candles1m), f2m, &wg)
+	candles10m := writeCandlesToFile(to10m(candles2m), f10m, &wg)
 	go func() {
 		defer wg.Done()
-		w := csv.NewWriter(f1m)
-		i := 0
-		for candle := range candles1m {
-			logger.Infof("prices (1m) %d: %+v", i, candle)
-			rCandles1m <- candle
-			err := w.Write(candleToString(candle))
-			if err != nil {
-				logger.Errorf("Can't write candle: %s", err)
-			} else {
-				w.Flush()
-			}
-			i++
+		for i := range candles10m {
+			logger.Infof("Candle processing is completed: %+v", i)
 		}
 	}()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT)
 	go func() {
 		defer wg.Done()
-		w := csv.NewWriter(f2m)
-		i := 0
-		for candle := range candles2m {
-			logger.Infof("prices (2m) %d: %+v", i, candle)
-			rCandles2m <- candle
-			err := w.Write(candleToString(candle))
-			if err != nil {
-				logger.Errorf("Can't write candle: %s", err)
-			} else {
-				w.Flush()
-			}
-			i++
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		w := csv.NewWriter(f10m)
-		i := 0
-		for candle := range candles10m {
-			logger.Infof("prices (10m) %d: %+v", i, candle)
-			err := w.Write(candleToString(candle))
-			if err != nil {
-				logger.Errorf("Can't write candle: %s", err)
-			} else {
-				w.Flush()
-			}
-			i++
-		}
+		<-c
+		logger.Infof("Start shoutdown...")
+		cancel()
 	}()
 	wg.Wait()
-	cancel()
 }
