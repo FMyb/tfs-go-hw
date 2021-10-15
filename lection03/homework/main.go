@@ -60,8 +60,8 @@ func to1m(in <-chan domain.Price) <-chan domain.Candle {
 	candles := make(map[string]domain.Candle)
 	go func() {
 		defer close(out)
-		candle := domain.Candle{}
 		for price := range in {
+			candle := domain.Candle{}
 			time1m, err := domain.PeriodTS(domain.CandlePeriod1m, price.TS)
 			if errors.Is(err, domain.ErrUnknownPeriod) {
 				log.Errorf("Can't convert period %s", price.TS)
@@ -78,14 +78,14 @@ func to1m(in <-chan domain.Price) <-chan domain.Candle {
 				} else {
 					out <- candle
 					candles[price.Ticker] = createCandle1mFromPrice(price, time1m)
-					candle = candles[price.Ticker]
 				}
 			} else {
 				candles[price.Ticker] = createCandle1mFromPrice(price, time1m)
-				candle = candles[price.Ticker]
 			}
 		}
-		out <- candle
+		for _, candle := range candles {
+			out <- candle
+		}
 		log.Infof("Close 1m")
 	}()
 	return out
@@ -96,8 +96,8 @@ func toOtherTime(in <-chan domain.Candle, period domain.CandlePeriod) <-chan dom
 	candles := make(map[string]domain.Candle)
 	go func() {
 		defer close(out)
-		candle := domain.Candle{}
 		for candleM := range in {
+			candle := domain.Candle{}
 			ts, err := domain.PeriodTS(period, candleM.TS)
 			if errors.Is(err, domain.ErrUnknownPeriod) {
 				log.Errorf("Can't convert period %s", candleM.TS)
@@ -114,14 +114,14 @@ func toOtherTime(in <-chan domain.Candle, period domain.CandlePeriod) <-chan dom
 				} else {
 					out <- candle
 					candles[candleM.Ticker] = createCandleFromCandle(candleM, period, ts)
-					candle = candles[candleM.Ticker]
 				}
 			} else {
 				candles[candleM.Ticker] = createCandleFromCandle(candleM, period, ts)
-				candle = candles[candleM.Ticker]
 			}
 		}
-		out <- candle
+		for _, candle := range candles {
+			out <- candle
+		}
 		log.Infof("Close %s", period)
 	}()
 	return out
