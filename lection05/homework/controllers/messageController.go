@@ -6,12 +6,21 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/FMyb/tfs-go-hw/lection05/homework/data"
 	"github.com/FMyb/tfs-go-hw/lection05/homework/domain"
 	"github.com/FMyb/tfs-go-hw/lection05/homework/models"
 	"github.com/FMyb/tfs-go-hw/lection05/homework/utils"
 )
 
-func SendToPublic(w http.ResponseWriter, r *http.Request) {
+type Messages struct {
+	data.MessagesDB
+}
+
+func NewMessages(messagesDB data.MessagesDB) *Messages {
+	return &Messages{MessagesDB: messagesDB}
+}
+
+func (mes *Messages) SendToPublic(w http.ResponseWriter, r *http.Request) {
 	d, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -26,7 +35,7 @@ func SendToPublic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m.UserID = r.Context().Value(utils.KeyUserID).(uint)
-	message := models.SendToPublic(m)
+	message := models.SendToPublic(m, mes)
 	res, err := json.Marshal(message)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -39,7 +48,7 @@ func SendToPublic(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func SendToUser(w http.ResponseWriter, r *http.Request) {
+func (mes *Messages) SendToUser(w http.ResponseWriter, r *http.Request) {
 	d, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -54,7 +63,7 @@ func SendToUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m.UserID = r.Context().Value(utils.KeyUserID).(uint)
-	message := models.SendToUser(m)
+	message := models.SendToUser(m, mes)
 	res, err := json.Marshal(message)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -67,9 +76,9 @@ func SendToUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetMessagesFromPublic(w http.ResponseWriter, r *http.Request) {
+func (mes *Messages) GetMessagesFromPublic(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	messages := models.GetMessagesFromPublic()
+	messages := models.GetMessagesFromPublic(mes)
 	res, err := json.Marshal(messages)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -82,7 +91,7 @@ func GetMessagesFromPublic(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetUserMessages(w http.ResponseWriter, r *http.Request) {
+func (mes *Messages) GetUserMessages(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	q := r.URL.Query()
@@ -95,7 +104,7 @@ func GetUserMessages(w http.ResponseWriter, r *http.Request) {
 		length = -1
 	}
 	uID := r.Context().Value(utils.KeyUserID).(uint)
-	message := models.GetUserMessages(uID, offset, length)
+	message := models.GetUserMessages(uID, offset, length, mes)
 	res, err := json.Marshal(message)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

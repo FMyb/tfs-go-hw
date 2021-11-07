@@ -1,32 +1,29 @@
 package repositories
 
-import "github.com/FMyb/tfs-go-hw/lection05/homework/domain"
+import (
+	"github.com/FMyb/tfs-go-hw/lection05/homework/data"
+	"github.com/FMyb/tfs-go-hw/lection05/homework/domain"
+)
 
-var messages []domain.Message
-
-var messageID uint = 1
-
-func SendToPublic(message domain.Message) *domain.Message {
-	message.ID = messageID
-	messageID++
+func SendToPublic(message domain.Message, mes data.MessagesDB) *domain.Message {
+	message.ID = mes.MessageIDGetAndInc()
 	message.ToUserID = 0
-	messages = append(messages, message)
+	mes.AddMessage(message)
 	return &message
 }
 
-func SendToUser(message domain.Message) *domain.Message {
-	message.ID = messageID
-	messageID++
+func SendToUser(message domain.Message, mes data.MessagesDB) *domain.Message {
+	message.ID = mes.MessageIDGetAndInc()
 	if message.ToUserID == 0 {
 		return nil
 	}
-	messages = append(messages, message)
+	mes.AddMessage(message)
 	return &message
 }
 
-func GetMessagesFromPublic() []domain.Message {
+func GetMessagesFromPublic(mes data.MessagesDB) []domain.Message {
 	result := make([]domain.Message, 0)
-	for _, message := range messages {
+	for _, message := range mes.Messages() {
 		if message.ToUserID == 0 {
 			result = append(result, message)
 		}
@@ -34,10 +31,10 @@ func GetMessagesFromPublic() []domain.Message {
 	return result
 }
 
-func GetUserMessages(userID uint, offset int, length int) []domain.Message {
+func GetUserMessages(userID uint, offset int, length int, mes data.MessagesDB) []domain.Message {
 	result := make([]domain.Message, 0)
 	cnt := 0
-	for _, message := range messages {
+	for _, message := range mes.Messages() {
 		if length != -1 && cnt > length {
 			break
 		}

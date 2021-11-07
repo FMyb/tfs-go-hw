@@ -5,12 +5,21 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/FMyb/tfs-go-hw/lection05/homework/data"
 	"github.com/FMyb/tfs-go-hw/lection05/homework/domain"
 	"github.com/FMyb/tfs-go-hw/lection05/homework/models"
 	"github.com/FMyb/tfs-go-hw/lection05/homework/utils"
 )
 
-func Login(w http.ResponseWriter, r *http.Request) {
+type Users struct {
+	data.UserDB
+}
+
+func NewUsers(userDB data.UserDB) *Users {
+	return &Users{UserDB: userDB}
+}
+
+func (us *Users) Login(w http.ResponseWriter, r *http.Request) {
 	d, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -24,7 +33,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	user, err := models.Login(u)
+	user, err := models.Login(u, us)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -43,7 +52,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UserRegister(w http.ResponseWriter, r *http.Request) {
+func (us *Users) UserRegister(w http.ResponseWriter, r *http.Request) {
 	d, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -57,7 +66,7 @@ func UserRegister(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	user, err := models.Create(u)
+	user, err := models.Create(u, us)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

@@ -1,14 +1,12 @@
 package repositories
 
 import (
+	"github.com/FMyb/tfs-go-hw/lection05/homework/data"
 	"github.com/FMyb/tfs-go-hw/lection05/homework/domain"
 )
 
-var users []domain.User
-var userID uint = 1
-
-func FindUserByEmail(email string) *domain.User {
-	for _, user := range users {
+func FindUserByEmail(email string, us data.UserDB) *domain.User {
+	for _, user := range us.Users() {
 		if user.Email == email {
 			return &user
 		}
@@ -16,9 +14,8 @@ func FindUserByEmail(email string) *domain.User {
 	return nil
 }
 
-func CreateUser(user domain.User) *domain.User {
-	user.ID = userID
-	userID++
-	users = append(users, user)
+func CreateUser(user domain.User, us data.UserDB) *domain.User {
+	user.ID = us.UsersIDGetAndInc()
+	us.AddUser(user)
 	return &user
 }
