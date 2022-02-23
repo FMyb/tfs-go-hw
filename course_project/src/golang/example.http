@@ -1,0 +1,21 @@
+POST http://localhost:5000/api/v1/configure
+Content-Type: application/json
+
+{
+  "product_id": "PI_XBTUSD",
+  "stop_val": 10,
+  "profit_val": 20
+}
+
+###
+
+POST http://localhost:5000/api/v1/start
+Content-Type: application/json
+
+###
+
+POST http://localhost:5000/api/v1/stop
+Content-Type: application/json
+
+###
+
